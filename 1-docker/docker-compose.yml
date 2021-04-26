@@ -1,0 +1,37 @@
+version: "3.7"
+
+services:
+  frontend:
+    image: node:12-alpine
+    command: sh -c "yarn install && yarn run dev"
+    build:
+      context: ./frontend
+    working_dir: /frontend
+    ports:
+      - 3000:3000
+    volumes:
+      - ./frontend:/frontend
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: secret
+      MYSQL_DB: todos
+
+  mysql:
+    image: mysql:5.7
+    volumes:
+      - todo-mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: todos
+
+  backend:
+    image: node:12.18.1
+    command: sh -c "yarn install && node server.js"
+    build:
+      context: ./backend
+    volumes:
+      - ./backend:/backend
+    working_dir: /backend
+volumes:
+  todo-mysql-data:
