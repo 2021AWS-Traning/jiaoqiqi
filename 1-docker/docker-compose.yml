@@ -16,6 +16,9 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: secret
       MYSQL_DB: todos
+    networks:
+      - network_a
+      - network_b
 
   mysql:
     image: mysql:5.7
@@ -24,6 +27,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: secret
       MYSQL_DATABASE: todos
+    networks:
+      - network_a
 
   backend:
     image: node:12.18.1
@@ -33,5 +38,13 @@ services:
     volumes:
       - ./backend:/backend
     working_dir: /backend
+    networks:
+      - network_b
 volumes:
   todo-mysql-data:
+
+networks:
+  network_a:
+    driver: bridge
+  network_b:
+    driver: bridge
