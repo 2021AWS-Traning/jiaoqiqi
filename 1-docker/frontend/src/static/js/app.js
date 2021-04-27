@@ -9,41 +9,9 @@ function App() {
             </Col>
           </Row>
         </Container>
-        <Data />
       </div>
       
     );
-}
-
-const getData = async () => {
-  const requestOptions = {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  };
-  const response = await fetch('http://localhost:8000/test', requestOptions);
-  const data = await response.json();
-  return data;
-};
-
-function Data() {
-  const [data, setData] =  React.useState([]);
-  
-  React.useEffect(() => {
-    getData().then(data => {
-      setData(data.payload)
-    })
-  }, []);
-  
-  return <div style={{margin: "10px", display:"flex", justifyContent: "center"}}>
-    {data.map((item) => {
-      return <div>
-        <div>{`Create Date: ${item.createDate}`}</div>
-        <div>{`ID: ${item.id}`}</div>
-        <div>{`Message: ${item.msg}`}</div>
-      </div>
-  
-    })}
-  </div>
 }
 
 function TodoListCard() {

@@ -1,4 +1,4 @@
-const db = require('../../src/persistence/sqlite');
+const db = require('../../../backend/persistence/sqlite');
 const fs = require('fs');
 
 const ITEM = {

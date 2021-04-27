@@ -37,6 +37,7 @@ services:
       - ./backend:/backend
     working_dir: /backend
     networks:
+      - network_a
       - network_b
   nginx:
     image: nginx

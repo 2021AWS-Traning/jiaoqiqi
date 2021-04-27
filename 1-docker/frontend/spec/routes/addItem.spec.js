@@ -1,5 +1,5 @@
-const db = require('../../src/persistence');
-const addItem = require('../../src/routes/addItem');
+const db = require('../../../backend/persistence');
+const addItem = require('../../../backend/routes/addItem');
 const ITEM = { id: 12345 };
 const uuid = require('uuid/v4');
 
