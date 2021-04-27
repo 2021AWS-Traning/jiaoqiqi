@@ -16,7 +16,6 @@ services:
       MYSQL_DB: todos
     networks:
       - network_a
-      - network_b
 
   mysql:
     image: mysql:5.7

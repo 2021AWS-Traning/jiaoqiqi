@@ -1,3 +1,5 @@
-1-docker/getting-started/node_modules
+node_modules
+1-docker/frontend/node_modules
+1-docker/backend/node_modules
 .idea
 .DS_Store
