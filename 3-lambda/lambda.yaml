@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda function example
+Resources:
+  primer:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs12.x
+      Role: arn:aws:iam::160071257600:role/lambda-ex
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            const response = {
+              statusCode: 200,
+              body: JSON.stringify('Hello from Lambda!'),
+            };
+            return response;
+          };
+
+      Description: Response 200 when request
+      TracingConfig:
+        Mode: Active
