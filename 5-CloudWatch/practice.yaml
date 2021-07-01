@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: cloudwatch alarm with lambda
+
+Resources:
+  QiqiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: qiqi-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+
+  QiqiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: 'qiqi-lambda-function'
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Role: !GetAtt QiqiRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            const response = {
+              statusCode: 200,
+              body: JSON.stringify('Hello here!'),
+            };
+            return response;
+          };
+
+  ScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "ScheduleRule to trigger lambda regularly"
+      ScheduleExpression: rate(1 minute)
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt QiqiFunction.Arn
+          Id: 'TargetFunction'
+
+  CloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: "qiqi-lambda-error-alarm"
+      AlarmDescription: "Alarm when lambda error occurs"
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref QiqiFunction
+      Statistic: Sum
+      Period: 60
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 1
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmSnsTopic
+      OKActions:
+        - !Ref AlarmSnsTopic
+
+  AlarmSnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: "errors from lambda"
+      TopicName: qiqi-alarm-topic
+      Subscription:
+        - Endpoint: "qiqi.jiao@thoughtworks.com"
+          Protocol: email
+
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref QiqiFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ScheduleRule.Arn
