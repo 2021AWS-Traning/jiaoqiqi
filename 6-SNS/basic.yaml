@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: cloudwatch alarm with lambda
+
+Resources:
+  QiqiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: qiqi-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: QiqiLambdaWithSQS
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ChangeMessageVisibility
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ReceiveMessage
+                Resource: !GetAtt QiqiQueue.Arn
+
+  QiqiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: 'qiqi-function'
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Role: !GetAtt QiqiRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            const response = {
+              statusCode: 200,
+              body: JSON.stringify('Hello here!'),
+            };
+            return response;
+          };
+
+  QiqiFunctionForSQS:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: 'qiqi-function-sqs'
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Role: !GetAtt QiqiRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            const response = {
+              statusCode: 200,
+              body: JSON.stringify('Hello SQS!'),
+            };
+            return response;
+          };
+
+  QiqiQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: qiqi-sqs
+
+  QiqiSQSAndLambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt QiqiQueue.Arn
+      FunctionName: !GetAtt QiqiFunctionForSQS.Arn
+
+  QiqiSNSTopic:
+    Type: AWS::SNS::Topic
+    DeletionPolicy: Delete
+    Properties:
+      DisplayName: qiqi-sns
+      Subscription:
+        - Endpoint: qiqi.jiao@thoughtworks.com
+          Protocol: email
+        - Endpoint:
+            Fn::GetAtt:
+              - "QiqiFunction"
+              - "Arn"
+          Protocol: lambda
+        - Endpoint:
+            Fn::GetAtt:
+              - "QiqiQueue"
+              - "Arn"
+          Protocol: sqs
+      TopicName: qiqi-sns
+
+  QiqiFunctionInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref QiqiFunction
+      Principal: sns.amazonaws.com
+
+  QiqiSNSTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      Topics:
+        - !Ref QiqiSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 'sns:Publish'
+            Resource: !Ref QiqiSNSTopic
+            Principal:
+              Service: events.amazonaws.com
+
+  QiqiSQSPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [{
+                 "Ref": "QiqiQueue"
+               }]
+      PolicyDocument:
+        Statement:
+          - Action:
+              - "SQS:SendMessage"
+              - "SQS:ReceiveMessage"
+            Effect: "Allow"
+            Resource: "*"
+            Principal: "*"
+
+  ScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "ScheduleRule to trigger SNS regularly"
+      ScheduleExpression: rate(2 minutes)
+      State: "ENABLED"
+      Targets:
+        - Arn:
+            Ref: "QiqiSNSTopic"
+          Id: 'TargetSNS'
+
